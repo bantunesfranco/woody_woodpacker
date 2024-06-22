@@ -28,4 +28,6 @@ uint32_t		get_uint32(uint32_t byte, uint16_t endian);
 int32_t			get_int32(int32_t byte, uint16_t endian);
 uint64_t		get_uint64(uint64_t byte, uint16_t endian);
 
+int	encrypt_file(t_file *file);
+
 #endif

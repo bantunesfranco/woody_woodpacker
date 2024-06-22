@@ -12,10 +12,23 @@ int	parse_header(t_file *file)
 		return (-1);
 	if (ident[EI_CLASS] == ELFCLASSNONE || ident[EI_DATA] == ELFDATANONE || ident[EI_VERSION] == EV_NONE)
 		return (-1);
-	if (header->e_version == EV_NONE || header->e_phnum != 0)
+	if (get_uint16(header->e_type, file->endian) != ET_EXEC && get_uint16(header->e_type, file->endian) != ET_DYN)
 		return (-1);
-	if (header->e_type != ET_EXEC || header->e_type != ET_DYN)
+	if (get_uint16(header->e_machine, file->endian) != EM_X86_64 && get_uint16(header->e_machine, file->endian) != EM_386)
 		return (-1);
+	if (get_uint32(header->e_version, file->endian) == EV_NONE)
+		return (-1);
+	if (get_uint16(header->e_phnum, file->endian) == 0)
+		return (-1);
+
+	printf("Magic: %c%c%c%c\n", ident[0], ident[1], ident[2], ident[3]);
+	printf("Class: %s\n", ident[EI_CLASS] == ELFCLASS32 ? "32-bit" : "64-bit");
+	printf("Type: %s\n", get_uint16(header->e_type, file->endian) == ET_EXEC ? "Executable" : "Shared object");
+	printf("Machine: %s\n", get_uint16(header->e_machine, file->endian) == EM_X86_64 ? "x86-64" : "x86");
+	printf("Version: %d\n", get_uint32(header->e_version, file->endian));
+	printf("Program header table entries: %d\n", get_uint16(header->e_phnum, file->endian));
+	printf("Program header table offset: %p\n", (void*)get_uint64(header->e_phoff, file->endian));
+	printf("Entry point address: %p\n\n", (void*)get_uint64(header->e_entry, file->endian));
 
 	return (0);
 }
@@ -28,7 +41,7 @@ int check_file(char *name, t_file *file)
 		return (-1);
 	if ((file->ptr = mmap(0, file->size, PROT_READ | PROT_WRITE, MAP_PRIVATE, file->fd, 0)) == MAP_FAILED)
 		return (-1);
-	file->end = file->ptr + file->size;
+	file->end = (void*)((uint32_t*)file->ptr + file->size);
 	return (parse_header(file));
 }
 
@@ -43,16 +56,14 @@ int main(int argc, char **argv)
 	t_file file;
 	memset(&file, 0, sizeof(t_file));
 
-	if (!check_file(argv[1], &file))
+	if (check_file(argv[1], &file) == -1)
 	{
 		dprintf(2, "Woody Woodpacker: Error: %s is not a valid file\n", argv[1]);
 		return (1);
 	}
 
-	printf("Woody Woodpacker: File %s is valid\n", argv[1]);
+	if (encrypt_file(&file) == -1)
+		return (1);
 
-	printf("endian: %d\n", file.endian);
-	printf("arch: %d\n", file.arch);
-	printf("size: %ld\n", file.size);
-	
+	return (0);
 }
