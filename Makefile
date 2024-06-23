@@ -9,7 +9,7 @@ END=\033[0m
 NAME = woody_woodpacker
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -Wpedantic
+CFLAGS = -Wall -Wextra -Werror
 
 ifndef DEBUG
 CFLAGS += -g -fsanitize=address

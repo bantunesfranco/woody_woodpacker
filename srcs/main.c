@@ -1,5 +1,45 @@
 #include "woody.h"
 
+void	print_section(t_file *file)
+{
+	if (file->arch == ELFCLASS32)
+	{
+		Elf32_Ehdr *header = file->ptr;
+		Elf32_Shdr *shstrtab = (Elf32_Shdr*)((char*)header + get_uint32(header->e_shoff, file->endian)) + header->e_shstrndx;
+		char *strtab = (char*)header + get_uint32(shstrtab->sh_offset, file->endian);
+		Elf32_Shdr *sections = (Elf32_Shdr*)((char*)header + get_uint32(header->e_shoff, file->endian));
+
+		for (int i = 0; i< header->e_shnum; ++i)
+		{
+			printf("Section %d\n", i);
+			printf("Name: %s\n", strtab + get_uint32(sections[i].sh_name, file->endian));
+			// printf("Type: %d\n", sections[i].sh_type);
+			// printf("Address: %p\n", (uint32_t*)get_uint32(sections[i].sh_addr, file->endian));
+			// printf("Offset: %p\n", (uint32_t*)get_uint32(sections[i].sh_offset, file->endian));
+			printf("Size: %d\n", get_uint32(sections[i].sh_size, file->endian));
+			printf("Entry size: %d\n\n", get_uint32(sections[i].sh_entsize, file->endian));
+		}
+	}
+	else
+	{
+		Elf64_Ehdr *header = file->ptr;
+		Elf64_Shdr *shstrtab = (Elf64_Shdr*)((char*)header + get_uint64(header->e_shoff, file->endian)) + header->e_shstrndx;
+		char *strtab = (char*)header + get_uint64(shstrtab->sh_offset, file->endian);
+		Elf64_Shdr *sections = (Elf64_Shdr*)((char*)header + get_uint64(header->e_shoff, file->endian));
+
+		for (int i = 0; i< header->e_shnum; ++i)
+		{
+			printf("Section %d\n", i);
+			printf("Name: %s\n", strtab + get_uint32(sections[i].sh_name, file->endian));
+			// printf("Type: %d\n", sections[i].sh_type);
+			// printf("Address: %p\n", (uint64_t*)get_uint64(sections[i].sh_addr, file->endian));
+			// printf("Offset: %p\n", (uint64_t*)get_uint64(sections[i].sh_offset, file->endian));
+			printf("Size: %ld\n", get_uint64(sections[i].sh_size, file->endian));
+			printf("Entry size: %ld\n\n", get_uint64(sections[i].sh_entsize, file->endian));
+		}
+	}
+}
+
 int	parse_header(t_file *file)
 {
 	Elf64_Ehdr *header = file->ptr;
@@ -30,6 +70,7 @@ int	parse_header(t_file *file)
 	printf("Program header table offset: %p\n", (void*)get_uint64(header->e_phoff, file->endian));
 	printf("Entry point address: %p\n\n", (void*)get_uint64(header->e_entry, file->endian));
 
+	// print_section(file);
 	return (0);
 }
 
