@@ -40,6 +40,44 @@ void	print_section(t_file *file)
 	}
 }
 
+void	print_segment(t_file *file)
+{
+	if (file->arch == ELFCLASS32)
+	{
+		Elf32_Ehdr *header = file->ptr;
+		Elf32_Phdr *segments = (Elf32_Phdr*)((char*)header + get_uint32(header->e_phoff, file->endian));
+
+		for (int i = 0; i< header->e_shnum; ++i)
+		{
+			if (get_uint32(segments[i].p_type, file->endian) != PT_LOAD)
+				continue;
+			printf("Segment %d\n", i);
+			printf("Offset: %x\n", (uint32_t)get_uint32(segments[i].p_offset, file->endian));
+			printf("VirtAddr: %x\n", (uint32_t)get_uint32(segments[i].p_vaddr, file->endian));
+			printf("PhysAddr: %x\n", (uint32_t)get_uint32(segments[i].p_paddr, file->endian));
+			printf("FileSize: %d\n", get_uint32(segments[i].p_filesz, file->endian));
+			printf("MemSize: %d\n\n", get_uint32(segments[i].p_memsz, file->endian));
+		}
+	}
+	else
+	{
+		Elf64_Ehdr *header = file->ptr;
+		Elf64_Phdr *segments = (Elf64_Phdr*)((char*)header + get_uint64(header->e_phoff, file->endian));
+
+		for (int i = 0; i< header->e_shnum; ++i)
+		{
+			if (get_uint32(segments[i].p_type, file->endian) != PT_LOAD)
+				continue;
+			printf("Segment %d\n", i);
+			printf("Offset: %p\n", (uint64_t*)get_uint64(segments[i].p_offset, file->endian));
+			printf("VirtAddr: %p\n", (uint64_t*)get_uint64(segments[i].p_vaddr, file->endian));
+			printf("PhysAddr: %p\n", (uint64_t*)get_uint64(segments[i].p_paddr, file->endian));
+			printf("FileSize: %ld\n", get_uint64(segments[i].p_filesz, file->endian));
+			printf("MemSize: %ld\n\n", get_uint64(segments[i].p_memsz, file->endian));
+		}
+	}
+}
+
 int	parse_header(t_file *file)
 {
 	Elf64_Ehdr *header = file->ptr;
@@ -71,6 +109,7 @@ int	parse_header(t_file *file)
 	printf("Entry point address: %p\n\n", (void*)get_uint64(header->e_entry, file->endian));
 
 	// print_section(file);
+	print_segment(file);
 	return (0);
 }
 
@@ -82,7 +121,7 @@ int check_file(char *name, t_file *file)
 		return (-1);
 	if ((file->ptr = mmap(0, file->size, PROT_READ | PROT_WRITE, MAP_PRIVATE, file->fd, 0)) == MAP_FAILED)
 		return (-1);
-	file->end = (void*)((uint32_t*)file->ptr + file->size);
+	file->end = file->ptr + file->size;
 	return (parse_header(file));
 }
 
@@ -106,5 +145,10 @@ int main(int argc, char **argv)
 	if (encrypt_file(&file) == -1)
 		return (1);
 
+	int output = open("woody", O_CREAT | O_WRONLY | O_TRUNC, 0755);
+	write(output, file.ptr, file.size);
+	close(output);
+	close(file.fd);
+	munmap(file.ptr, file.size);
 	return (0);
 }
