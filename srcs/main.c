@@ -1,82 +1,35 @@
 #include "woody.h"
 
-void	print_section(t_file *file)
-{
-	if (file->arch == ELFCLASS32)
-	{
-		Elf32_Ehdr *header = file->ptr;
-		Elf32_Shdr *shstrtab = (Elf32_Shdr*)((char*)header + get_uint32(header->e_shoff, file->endian)) + header->e_shstrndx;
-		char *strtab = (char*)header + get_uint32(shstrtab->sh_offset, file->endian);
-		Elf32_Shdr *sections = (Elf32_Shdr*)((char*)header + get_uint32(header->e_shoff, file->endian));
+// void	print_section(t_file *file)
+// {
+// 	if (file->arch == ELFCLASS32)
+// 	{
+// 		Elf32_Ehdr *header = file->ptr;
+// 		Elf32_Shdr *shstrtab = get_section(file, get_uint32(header->e_shstrndx, file->endian));
+// 		char *strtab = (void*)header + get_uint32(shstrtab->sh_offset, file->endian);
 
-		for (int i = 0; i< header->e_shnum; ++i)
-		{
-			printf("Section %d\n", i);
-			printf("Name: %s\n", strtab + get_uint32(sections[i].sh_name, file->endian));
-			// printf("Type: %d\n", sections[i].sh_type);
-			// printf("Address: %p\n", (uint32_t*)get_uint32(sections[i].sh_addr, file->endian));
-			// printf("Offset: %p\n", (uint32_t*)get_uint32(sections[i].sh_offset, file->endian));
-			printf("Size: %d\n", get_uint32(sections[i].sh_size, file->endian));
-			printf("Entry size: %d\n\n", get_uint32(sections[i].sh_entsize, file->endian));
-		}
-	}
-	else
-	{
-		Elf64_Ehdr *header = file->ptr;
-		Elf64_Shdr *shstrtab = (Elf64_Shdr*)((char*)header + get_uint64(header->e_shoff, file->endian)) + header->e_shstrndx;
-		char *strtab = (char*)header + get_uint64(shstrtab->sh_offset, file->endian);
-		Elf64_Shdr *sections = (Elf64_Shdr*)((char*)header + get_uint64(header->e_shoff, file->endian));
+// 		for (int i = 0; i < header->e_shnum; ++i)
+// 		{
+// 			Elf32_Shdr *section = get_section(file, i);
+// 			printf("Section %d\n", i);
+// 			printf("Name: %s\n", strtab + get_uint32(section->sh_name, file->endian));
+// 		}
+// 	}
+// 	else
+// 	{
+// 		Elf64_Ehdr *header = file->ptr;
+// 		Elf64_Shdr *shstrtab = get_section(file, get_uint64(header->e_shstrndx, file->endian));
+// 		char *strtab = (void*)header + get_uint64(shstrtab->sh_offset, file->endian);
 
-		for (int i = 0; i< header->e_shnum; ++i)
-		{
-			printf("Section %d\n", i);
-			printf("Name: %s\n", strtab + get_uint32(sections[i].sh_name, file->endian));
-			// printf("Type: %d\n", sections[i].sh_type);
-			// printf("Address: %p\n", (uint64_t*)get_uint64(sections[i].sh_addr, file->endian));
-			// printf("Offset: %p\n", (uint64_t*)get_uint64(sections[i].sh_offset, file->endian));
-			printf("Size: %ld\n", get_uint64(sections[i].sh_size, file->endian));
-			printf("Entry size: %ld\n\n", get_uint64(sections[i].sh_entsize, file->endian));
-		}
-	}
-}
+// 		for (int i = 0; i < header->e_shnum; ++i)
+// 		{
+// 			Elf64_Shdr *section = get_section(file, i);
+// 			printf("Section %d\n", i);
+// 			printf("Name: %s\n", strtab + get_uint32(section->sh_name, file->endian));
+// 		}
+// 	}
+// }
 
-void	print_segment(t_file *file)
-{
-	if (file->arch == ELFCLASS32)
-	{
-		Elf32_Ehdr *header = file->ptr;
-		Elf32_Phdr *segments = (Elf32_Phdr*)((char*)header + get_uint32(header->e_phoff, file->endian));
-
-		for (int i = 0; i< header->e_shnum; ++i)
-		{
-			if (get_uint32(segments[i].p_type, file->endian) != PT_LOAD)
-				continue;
-			printf("Segment %d\n", i);
-			printf("Offset: %x\n", (uint32_t)get_uint32(segments[i].p_offset, file->endian));
-			printf("VirtAddr: %x\n", (uint32_t)get_uint32(segments[i].p_vaddr, file->endian));
-			printf("PhysAddr: %x\n", (uint32_t)get_uint32(segments[i].p_paddr, file->endian));
-			printf("FileSize: %d\n", get_uint32(segments[i].p_filesz, file->endian));
-			printf("MemSize: %d\n\n", get_uint32(segments[i].p_memsz, file->endian));
-		}
-	}
-	else
-	{
-		Elf64_Ehdr *header = file->ptr;
-		Elf64_Phdr *segments = (Elf64_Phdr*)((char*)header + get_uint64(header->e_phoff, file->endian));
-
-		for (int i = 0; i< header->e_shnum; ++i)
-		{
-			if (get_uint32(segments[i].p_type, file->endian) != PT_LOAD)
-				continue;
-			printf("Segment %d\n", i);
-			printf("Offset: %p\n", (uint64_t*)get_uint64(segments[i].p_offset, file->endian));
-			printf("VirtAddr: %p\n", (uint64_t*)get_uint64(segments[i].p_vaddr, file->endian));
-			printf("PhysAddr: %p\n", (uint64_t*)get_uint64(segments[i].p_paddr, file->endian));
-			printf("FileSize: %ld\n", get_uint64(segments[i].p_filesz, file->endian));
-			printf("MemSize: %ld\n\n", get_uint64(segments[i].p_memsz, file->endian));
-		}
-	}
-}
 
 int	parse_header(t_file *file)
 {
@@ -109,7 +62,6 @@ int	parse_header(t_file *file)
 	printf("Entry point address: %p\n\n", (void*)get_uint64(header->e_entry, file->endian));
 
 	// print_section(file);
-	print_segment(file);
 	return (0);
 }
 
@@ -145,10 +97,10 @@ int main(int argc, char **argv)
 	if (encrypt_file(&file) == -1)
 		return (1);
 
-	int output = open("woody", O_CREAT | O_WRONLY | O_TRUNC, 0755);
-	write(output, file.ptr, file.size);
-	close(output);
-	close(file.fd);
-	munmap(file.ptr, file.size);
+	t_payload payload;
+	init_payload(&file, &payload);
+	inject_payload(&file, &payload);
+	patch(file.ptr, &payload);
 	return (0);
 }
+

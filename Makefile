@@ -10,6 +10,7 @@ NAME = woody_woodpacker
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror
+LDFLAGS = -lssl -lcrypto
 
 ifndef DEBUG
 CFLAGS += -g -fsanitize=address
@@ -20,28 +21,36 @@ DIR_I = incs
 DIR_O = obj
 
 INCS = -I $(DIR_I)
-SRCS = $(shell find $(DIR_S) -name '*.c')
+SRCS_C = $(shell find $(DIR_S) -name '*.c')
+SRCS_S = $(shell find $(DIR_S) -name '*.s')
 HEADERS = $(shell find $(DIR_I) -name '*.h')
-OBJS = $(patsubst $(DIR_S)/%.s,$(DIR_O)/%.o,$(SRCS))
+OBJS_C = $(SRCS_C:$(DIR_S)/%.c=$(DIR_O)/%.o)
+OBJS_S = $(SRCS_S:$(DIR_S)/%.s=$(DIR_O)/%.o)
+OBJS = $(OBJS_C) $(OBJS_S)
 
 $(NAME): $(OBJS)
-	@echo "$(MAGENTA)Creating $@$(END)"
-	@$(CC) $(CFLAGS) $(INCS) $(OBJS) -o $@
-	@echo "$(GREEN)Done!$(END)"
+	@echo "Creating $@"
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(INCS) $(OBJS) -o $@
+	@echo "Done!"
 
 $(DIR_O)/%.o: $(DIR_S)/%.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	@echo "$(BLUE)Compiling $(notdir $<)$(END)"
+	@echo "Compiling $(notdir $<)"
+	@$(CC) $(CFLAGS) $(INCS) -c $< -o $@
+
+$(DIR_O)/%.o: $(DIR_S)/%.s
+	@mkdir -p $(dir $@)
+	@echo "Assembling $(notdir $<)"
 	@$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
 all: $(NAME)
 
 clean: 
-	@echo "$(RED)Removing objs$(END)"
+	@echo "Removing objs"
 	@rm -rf $(DIR_O)
 
 fclean: clean
-	@echo "$(RED)Removing $(NAME)$(END)"
+	@echo "Removing $(NAME)"
 	@rm -rf $(NAME)
 
 re: fclean all
