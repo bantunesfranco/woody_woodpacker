@@ -6,13 +6,13 @@
 /*   By: bfranco <bfranco@student.codam.nl>           +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/06/22 16:47:02 by bfranco       #+#    #+#                 */
-/*   Updated: 2024/06/25 20:25:15 by bfranco       ########   odam.nl         */
+/*   Updated: 2024/06/28 11:46:59 by bfranco       ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "woody.h"
-#include <openssl/evp.h>
-#include <openssl/rand.h>
+// #include <openssl/evp.h>
+// #include <openssl/rand.h>
 
 // extern void		xor_rot_encrypt(unsigned char *text, uint64_t text_size, unsigned char *key, size_t key_size);
 
@@ -29,9 +29,9 @@ void axor_rot_encrypt(uint8_t *data, size_t data_size, const uint8_t *key, size_
 }
 
 static int parameterized_encryption(void *text, uint64_t text_size) {
-	unsigned char salt[16];
+	// unsigned char salt[16];
 	unsigned char key[32];
-	int iterations = 100000;
+	// int iterations = 100000;
 
 	char password[] = "very_secure_password_1234";
 	// char password[32];
@@ -40,13 +40,16 @@ static int parameterized_encryption(void *text, uint64_t text_size) {
 	// fgets(password, 32, stdin);
 
 	// Generate a random salt
-	if (RAND_bytes(salt, sizeof(salt)) != 1) {
-		return -1;
-	}
-	// Derive the encryption key using PBKDF2
-	if (PKCS5_PBKDF2_HMAC(password, strlen(password), salt, sizeof(salt), iterations, EVP_sha256(), sizeof(key), key) == 0) {
-		return -1;
-	}
+	// if (RAND_bytes(salt, sizeof(salt)) != 1) {
+	// 	return -1;
+	// }
+	// // Derive the encryption key using PBKDF2
+	// if (PKCS5_PBKDF2_HMAC(password, strlen(password), salt, sizeof(salt), iterations, EVP_sha256(), sizeof(key), key) == 0) {
+	// 	return -1;
+	// }
+
+	memset(key, 0, sizeof(key));
+	memcpy(key, password, strlen(password));
 
 	axor_rot_encrypt((unsigned char*)text, text_size, key, sizeof(key));
 	return 0;

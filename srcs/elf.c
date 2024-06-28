@@ -6,7 +6,7 @@
 /*   By: bfranco <bfranco@student.codam.nl>           +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/06/25 11:16:45 by bfranco       #+#    #+#                 */
-/*   Updated: 2024/06/25 20:30:57 by bfranco       ########   odam.nl         */
+/*   Updated: 2024/06/28 11:37:17 by bfranco       ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ void	*get_section_by_name(t_file *file, char *name)
 		{
 			Elf32_Shdr *section = get_section(file, i);
 			char *section_name = strtab + get_uint32(section->sh_name, file->endian);
-			if (!strncmp(name, section, strlen(name) + 1))
+			if (!strncmp(name, section_name, strlen(name) + 1))
 				return section;
 		}
 	}
@@ -53,8 +53,8 @@ void	*get_section_by_name(t_file *file, char *name)
 		for (int i = 0; i < header->e_shnum; ++i)
 		{
 			Elf64_Shdr *section = get_section(file, i);
-			char* name = strtab + get_uint32(section->sh_name, file->endian);
-			if (!strncmp(name, section, strlen(name) + 1))
+			char* section_name = strtab + get_uint32(section->sh_name, file->endian);
+			if (!strncmp(name, section_name, strlen(name) + 1))
 				return section;
 		}
 	}

@@ -10,7 +10,7 @@ NAME = woody_woodpacker
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror
-LDFLAGS = -lssl -lcrypto
+# LDFLAGS = -lssl -lcrypto
 
 ifndef DEBUG
 CFLAGS += -g -fsanitize=address

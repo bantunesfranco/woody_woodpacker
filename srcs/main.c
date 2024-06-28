@@ -30,6 +30,15 @@
 // 	}
 // }
 
+void	create_new_executable(t_file *file)
+{
+	char *new_name = "woody";
+	int fd = open(new_name, O_CREAT | O_RDWR, 0755);
+	write(fd, file->ptr, file->size);
+	close(fd);
+	munmap(file->ptr, file->size);
+	close(file->fd);
+}
 
 int	parse_header(t_file *file)
 {
@@ -98,9 +107,9 @@ int main(int argc, char **argv)
 		return (1);
 
 	t_payload payload;
-	init_payload(&file, &payload);
 	inject_payload(&file, &payload);
-	patch(file.ptr, &payload);
+	// patch(file.ptr, &payload);
+	create_new_executable(&file);
 	return (0);
 }
 

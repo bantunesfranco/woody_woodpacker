@@ -6,7 +6,7 @@
 /*   By: bfranco <bfranco@student.codam.nl>           +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/06/25 17:51:22 by bfranco       #+#    #+#                 */
-/*   Updated: 2024/06/25 20:50:09 by bfranco       ########   odam.nl         */
+/*   Updated: 2024/06/28 12:51:32 by bfranco       ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,41 +38,76 @@ unsigned char shellcode[] = {
 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x00
 };
 
+uint64_t	get_padding(t_file *file, void *text)
+{
+	if (file->arch == ELFCLASS32)
+	{
+		unsigned char *start = file->ptr + ((Elf32_Phdr*)text)->p_offset + ((Elf32_Phdr*)text)->p_filesz;
+		int padding = 0;
+		while (!start[padding])
+			padding++;
+		return (padding);
+	}
+	else
+	{
+		unsigned char *start = file->ptr + ((Elf64_Phdr*)text)->p_offset + ((Elf64_Phdr*)text)->p_filesz;
+		int padding = 0;
+		while (!start[padding])
+			padding++;
+		return (padding);
+	}
+	return (-1);
+}
+
 int	inject_payload(t_file *file, t_payload *payload)
 {
 	memset(payload, 0, sizeof(t_payload));
 
 	if (file->arch == ELFCLASS32)
 	{
-		Elf32_Ehdr *header = file->ptr;
-		Elf32_Phdr	*phdr = (void*)header + get_uint32(header->e_phoff, file->endian);
 		Elf32_Phdr	*text = get_text_segment(file);
 
 		if (text == NULL)
 			return (-1);
 		
-		Elf32_Off inject_offset = text->p_offset + text->p_filesz;
-		Elf32_Addr inject_addr = text->p_vaddr + text->p_filesz;
-		Elf32_Off main_offset = get_uint32(header->e_entry, file->endian)
+		uint64_t padding = get_padding(file, text);
+		if (padding < sizeof(shellcode))
+			return (-1);
 
+		payload->addr = file->ptr + text->p_offset + text->p_filesz;
 		
+		memcpy(file->ptr + text->p_offset + text->p_filesz, shellcode, sizeof(shellcode));
+		text->p_filesz += sizeof(shellcode);
+		text->p_memsz += sizeof(shellcode);
 		
+		payload->size = sizeof(shellcode);
+		payload->text = file->ptr + text->p_offset;
+		payload->text_size = text->p_filesz;
+
+		((Elf32_Ehdr *)file->ptr)->e_entry = (Elf64_Addr)payload->addr;
 	}
 	else
 	{
-		Elf64_Shdr	*text = get_section_by_name(file, ".text");
-		Elf64_Phdr	*phdr = get_text_segment(file);
+		Elf64_Phdr	*text = get_text_segment(file);
 
-		if (phdr == NULL)
+		if (text == NULL)
 			return (-1);
 		
-		Elf64_Off
+		uint64_t padding = get_padding(file, text);
+		if (padding < sizeof(shellcode))
+			return (-1);
+
+		payload->addr = file->ptr + text->p_offset + text->p_filesz;
 		
+		memcpy(file->ptr + text->p_offset + text->p_filesz, shellcode, sizeof(shellcode));
+		text->p_filesz += sizeof(shellcode);
+		text->p_memsz += sizeof(shellcode);
+		
+		payload->size = sizeof(shellcode);
+		payload->text = file->ptr + text->p_offset;
+		payload->text_size = text->p_filesz;
 
-
+		((Elf64_Ehdr *)file->ptr)->e_entry = (Elf64_Addr)payload->addr;
 	}
-	
-	
-	
 	return (0);
 }

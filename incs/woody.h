@@ -27,6 +27,7 @@ typedef struct s_file
 typedef struct s_payload
 {
 	void		*text;
+	void		*addr;
 	uint64_t	text_size;
 	uint64_t	size;
 } t_payload;
@@ -39,5 +40,6 @@ uint64_t		get_uint64(uint64_t byte, uint16_t endian);
 int				encrypt_file(t_file *file);
 void			*get_section_by_name(t_file *file, char *name);
 void			*get_text_segment(t_file *file);
+int				inject_payload(t_file *file, t_payload *payload);
 
 #endif
