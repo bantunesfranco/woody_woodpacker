@@ -6,108 +6,134 @@
 /*   By: bfranco <bfranco@student.codam.nl>           +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/06/25 17:51:22 by bfranco       #+#    #+#                 */
-/*   Updated: 2024/06/28 12:51:32 by bfranco       ########   odam.nl         */
+/*   Updated: 2025/03/21 22:55:17 by bfranco       ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "woody.h"
 
-unsigned char shellcode[] = {
-0x4c, 0x8d, 0x05, 0xf9, 0xff, 0xff, 0xff, 0x4d, 0x89, 0xc1, 0x4d, 0x2b,
-0x88, 0xe1, 0x10, 0x40, 0x00, 0xe9, 0x96, 0x00, 0x00, 0x00, 0xb8, 0x0a,
-0x00, 0x00, 0x00, 0x4c, 0x89, 0xc7, 0x49, 0x2b, 0xb8, 0xe9, 0x10, 0x40,
-0x00, 0x49, 0x8b, 0xb0, 0xe9, 0x10, 0x40, 0x00, 0xba, 0x07, 0x00, 0x00,
-0x00, 0x0f, 0x05, 0xe8, 0x74, 0x00, 0x00, 0x00, 0x31, 0xc0, 0x8d, 0x3d,
-0x71, 0x00, 0x00, 0x00, 0x67, 0x80, 0x3c, 0x07, 0x00, 0x74, 0x04, 0xff,
-0xc0, 0xeb, 0xf5, 0x89, 0xc2, 0x89, 0xfe, 0xbf, 0x01, 0x00, 0x00, 0x00,
-0xb8, 0x01, 0x00, 0x00, 0x00, 0x0f, 0x05, 0x4c, 0x8d, 0x15, 0x5e, 0x00,
-0x00, 0x00, 0x4d, 0x8b, 0x98, 0xf1, 0x10, 0x40, 0x00, 0x4d, 0x8b, 0xa0,
-0xf9, 0x10, 0x40, 0x00, 0x4d, 0x31, 0xed, 0x41, 0x8a, 0x03, 0x43, 0x8a,
-0x1c, 0x2a, 0xc0, 0xc8, 0x02, 0x30, 0xd8, 0x41, 0x88, 0x03, 0x49, 0xff,
-0xc3, 0x49, 0xff, 0xc5, 0x43, 0x80, 0x3c, 0x2a, 0x00, 0x75, 0x03, 0x4d,
-0x31, 0xed, 0x49, 0xff, 0xcc, 0x75, 0xdc, 0x41, 0x51, 0x4d, 0x31, 0xc0,
-0x4d, 0x31, 0xc9, 0x4d, 0x31, 0xd2, 0x4d, 0x31, 0xdb, 0x4d, 0x31, 0xe4,
-0x4d, 0x31, 0xed, 0xc3, 0xe8, 0x65, 0xff, 0xff, 0xff, 0x2e, 0x2e, 0x2e,
-0x2e, 0x57, 0x4f, 0x4f, 0x44, 0x59, 0x2e, 0x2e, 0x2e, 0x2e, 0x0a, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x31, 0x32,
-0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x61, 0x62, 0x63, 0x64,
-0x65, 0x66, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
-0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x00
-};
-
-uint64_t	get_padding(t_file *file, void *text)
+void	create_new_executable(t_file *file)
 {
-	if (file->arch == ELFCLASS32)
+	char *new_name = "woody";
+	int fd = open(new_name, O_CREAT | O_RDWR, 0755);
+	lseek(file->fd, 0, SEEK_SET);
+	write(fd, file->ptr, file->size);
+	close(fd);
+	munmap(file->ptr, file->size + 2*SHELLCODE_SIZE);
+	close(file->fd);
+}
+
+void set_entrypoint(t_file *file, int patch_location)
+{
+	if (patch_location == LOAD)
 	{
-		unsigned char *start = file->ptr + ((Elf32_Phdr*)text)->p_offset + ((Elf32_Phdr*)text)->p_filesz;
-		int padding = 0;
-		while (!start[padding])
-			padding++;
-		return (padding);
+		if (file->arch == ELFCLASS32)
+		{
+			((Elf32_Ehdr*)file->ptr)->e_entry = ((Elf32_Phdr*)file->load_seg)->p_vaddr + ((Elf32_Phdr*)file->load_seg)->p_filesz;
+			((Elf32_Phdr*)file->load_seg)->p_memsz += SHELLCODE_SIZE;
+			((Elf32_Phdr*)file->load_seg)->p_filesz += SHELLCODE_SIZE;
+			
+		}
+		else if (file->arch == ELFCLASS64)
+		{
+			((Elf64_Ehdr*)file->ptr)->e_entry = ((Elf64_Phdr*)file->load_seg)->p_vaddr +  ((Elf64_Phdr*)file->load_seg)->p_filesz;
+			printf("Woody Woodpacker: new entry point: %#lx\n", ((Elf64_Ehdr*)file->ptr)->e_entry);
+			((Elf64_Phdr*)file->load_seg)->p_memsz += SHELLCODE_SIZE;
+			((Elf64_Phdr*)file->load_seg)->p_filesz += SHELLCODE_SIZE;
+		}
 	}
 	else
 	{
-		unsigned char *start = file->ptr + ((Elf64_Phdr*)text)->p_offset + ((Elf64_Phdr*)text)->p_filesz;
-		int padding = 0;
-		while (!start[padding])
-			padding++;
-		return (padding);
+		if (file->arch == ELFCLASS32)
+			((Elf32_Ehdr*)file->ptr)->e_entry = ((Elf32_Phdr*)file->payload_section)->p_vaddr;
+		else if (file->arch == ELFCLASS64)
+			((Elf64_Ehdr*)file->ptr)->e_entry = ((Elf64_Phdr*)file->payload_section)->p_vaddr;
 	}
-	return (-1);
 }
+
+static int	get_shellcode(char *shellcode)
+{
+	int fd = open("./stub", O_RDONLY);
+	if (fd == -1)
+	{
+		dprintf(2, "Woody Woodpacker: Error: Failed to open stub\n");
+		return -1;
+	}
+	
+	ssize_t bytes_read = read(fd, shellcode, SHELLCODE_SIZE);
+	close(fd);
+	if (bytes_read == -1)
+	{
+		dprintf(2, "Woody Woodpacker: Error: Failed to read stub\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int verify_injection(t_file *file, void *payload_addr)
+{
+    if (file->arch == ELFCLASS64)
+    {
+        Elf64_Phdr *load = (Elf64_Phdr*)file->load_seg;
+        
+        // Verify segment permissions
+        if (!(load->p_flags & PF_X))
+        {
+            dprintf(2, "Error: Segment not executable\n");
+            return -1;
+        }
+        
+        // Verify payload is within segment bounds
+		printf("load addr %p\n",(char*)file->ptr + load->p_offset);
+		printf("payload addr %p\n", payload_addr);
+		printf("load_end addr %p\n", (char*)file->ptr + load->p_offset + load->p_filesz);
+        if ((char*)payload_addr < (char*)file->ptr + load->p_offset ||
+            (char*)payload_addr + SHELLCODE_SIZE > (char*)file->ptr + load->p_offset + load->p_filesz)
+        {
+            dprintf(2, "Error: Payload outside segment bounds\n");
+            return -1;
+        }
+    }
+    return 0;
+}
+
 
 int	inject_payload(t_file *file, t_payload *payload)
 {
-	memset(payload, 0, sizeof(t_payload));
+	file->text_sec = get_section_by_name(file, ".text");
+	file->load_seg = get_load_segment(file);
 
-	if (file->arch == ELFCLASS32)
+	if (!file->text_sec || !file->load_seg)
 	{
-		Elf32_Phdr	*text = get_text_segment(file);
-
-		if (text == NULL)
-			return (-1);
-		
-		uint64_t padding = get_padding(file, text);
-		if (padding < sizeof(shellcode))
-			return (-1);
-
-		payload->addr = file->ptr + text->p_offset + text->p_filesz;
-		
-		memcpy(file->ptr + text->p_offset + text->p_filesz, shellcode, sizeof(shellcode));
-		text->p_filesz += sizeof(shellcode);
-		text->p_memsz += sizeof(shellcode);
-		
-		payload->size = sizeof(shellcode);
-		payload->text = file->ptr + text->p_offset;
-		payload->text_size = text->p_filesz;
-
-		((Elf32_Ehdr *)file->ptr)->e_entry = (Elf64_Addr)payload->addr;
+		dprintf(2, "Woody Woodpacker: Error: Failed to get text section or load segment\n");
+		return (-1);
 	}
-	else
+
+	int patch_location;
+	void *payload_addr = patch(file, payload, &patch_location);
+	if (!payload_addr)
 	{
-		Elf64_Phdr	*text = get_text_segment(file);
-
-		if (text == NULL)
-			return (-1);
-		
-		uint64_t padding = get_padding(file, text);
-		if (padding < sizeof(shellcode))
-			return (-1);
-
-		payload->addr = file->ptr + text->p_offset + text->p_filesz;
-		
-		memcpy(file->ptr + text->p_offset + text->p_filesz, shellcode, sizeof(shellcode));
-		text->p_filesz += sizeof(shellcode);
-		text->p_memsz += sizeof(shellcode);
-		
-		payload->size = sizeof(shellcode);
-		payload->text = file->ptr + text->p_offset;
-		payload->text_size = text->p_filesz;
-
-		((Elf64_Ehdr *)file->ptr)->e_entry = (Elf64_Addr)payload->addr;
+		dprintf(2, "Woody Woodpacker: Error: Failed to patch payload\n");
+		return (-1);
 	}
+
+	char shellcode[SHELLCODE_SIZE];
+	if (get_shellcode((char*)shellcode) != 0)
+	{
+		dprintf(2, "Woody Woodpacker: Error: Failed to get shellcode\n");
+		return (-1);
+	}
+
+	memcpy(payload_addr, shellcode, SHELLCODE_SIZE);
+	memcpy(payload_addr + PATCH_OFFSET, payload, sizeof(t_payload));
+	
+	printf("Woody Woodpacker: Successfully injected payload into %s\n", patch_location == LOAD ? "LOAD" : patch_location == NOTE ? "NOTE" : "BSS");
+
+	set_entrypoint(file, patch_location);
+
+	if (verify_injection(file, payload_addr) != 0)
+		return -1;
 	return (0);
 }

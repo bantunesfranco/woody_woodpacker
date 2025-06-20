@@ -2,3 +2,6 @@
 *.vscode
 *.o
 resources
+stub
+stub.o
+woody*

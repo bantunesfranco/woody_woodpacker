@@ -8,11 +8,11 @@ END=\033[0m
 
 NAME = woody_woodpacker
 
-CC = gcc
+CC = cc
 CFLAGS = -Wall -Wextra -Werror
-# LDFLAGS = -lssl -lcrypto
+LDFLAGS = -lssl -lcrypto
 
-ifndef DEBUG
+ifdef DEBUG
 CFLAGS += -g -fsanitize=address
 endif
 
@@ -28,9 +28,11 @@ OBJS_C = $(SRCS_C:$(DIR_S)/%.c=$(DIR_O)/%.o)
 OBJS_S = $(SRCS_S:$(DIR_S)/%.s=$(DIR_O)/%.o)
 OBJS = $(OBJS_C) $(OBJS_S)
 
-$(NAME): $(OBJS)
+all: $(NAME)
+
+$(NAME): $(OBJS) stub
 	@echo "Creating $@"
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(INCS) $(OBJS) -o $@
+	@$(CC) $(CFLAGS) $(INCS) $(OBJS) -o $@ $(LDFLAGS)
 	@echo "Done!"
 
 $(DIR_O)/%.o: $(DIR_S)/%.c $(HEADERS)
@@ -41,13 +43,17 @@ $(DIR_O)/%.o: $(DIR_S)/%.c $(HEADERS)
 $(DIR_O)/%.o: $(DIR_S)/%.s
 	@mkdir -p $(dir $@)
 	@echo "Assembling $(notdir $<)"
-	@$(CC) $(CFLAGS) $(INCS) -c $< -o $@
+	@nasm -f elf64 -g -F dwarf $< -o $@
 
-all: $(NAME)
+stub: stub.s
+	@echo "Assembling stub"
+	@nasm -f bin stub.s -o stub
+	@echo "Done!"
 
 clean: 
 	@echo "Removing objs"
 	@rm -rf $(DIR_O)
+	@rm -rf stub
 
 fclean: clean
 	@echo "Removing $(NAME)"
@@ -55,7 +61,11 @@ fclean: clean
 
 re: fclean all
 
-debug:
+debug: fclean
 	@$(MAKE) all DEBUG=1
+
+debug_stub: debug_stub.s
+	@echo "Assembling debug stub"
+	@nasm -f bin -g debug_stub.s -o stub
 
 .PHONY: all clean fclean re debug
